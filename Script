@@ -1,0 +1,142 @@
+/*** Devin Patton 7/2/2019***/
+/*** Function onOpen adds buttons to the Google Sheet's toolbar, which activate the script's different functions. ***/ 
+function onOpen(){
+var ui = SpreadsheetApp.getUi();
+  ui.createMenu('File Builder')   
+    .addItem('Build Files', 'folderBuilder')// lines 22-48
+    .addItem('Sort Folders', 'organizeFolders')// lines 50-73
+    .addItem('Merge Folders', 'mergeFolders')// lines 75-100
+     .addItem('Get Folder Info', 'returnFileNameID')// lines 101-116 
+    .addItem('Sort First Last Name', 'sortNames') //lines 118-137
+    .addToUi(); 
+}
+
+     var mainStudents = DriveApp.getFolderById("1_8OZxLYtgUQASB9EtsNPo9ScaMeEtyhj");  //Change folder IDs for your folders lines 12-17
+     var newlyCreatedStudents = DriveApp.getFolderById('1JxCSnI7P5sBey7lThkIsMYbgyTAiSDlg');
+     var folderAF = DriveApp.getFolderById("1pOfd1Yw6kGmnKAtiNb_caz3ajG8FTqYd"); 
+     var folderGM = DriveApp.getFolderById("1_Fi8l2ibUklzIc4wdnyoVT6CRZqou80A");
+     var folderNS = DriveApp.getFolderById("1NmhaAR2K2jH17-R6RMPejcxDej-43_y5");
+     var folderTZ = DriveApp.getFolderById("155pjk_QYoITlLSIwPHpJCYq9wIZTcJV1");
+     var arrNames = [folderAF, folderGM, folderNS, folderTZ];
+     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet(); 
+     var r2 = 2; c1 = 1; c2 = 2; 
+     
+/*** Function folderBuilder takes a preformatted spreadsheet of student information and builds a file system ***/ 
+function folderBuilder(){
+    var workBook = SpreadsheetApp.getActiveSpreadsheet();
+    var workSheet = workBook.getSheetByName("Sheet1"); 
+    var range = SpreadsheetApp.getActiveSheet().getActiveRange();  
+    var numCols = range.getNumColumns();
+    var numRows = range.getNumRows();
+ 
+ for (var i = 3; i-2 <= numRows;  i++){ 
+        var firstName = range.getCell(i,1).getValue();  
+        var lastName = range.getCell(i,2).getValue();
+        var studentId = workSheet.getRange(i,3).getValue();
+        var studentEmail = workSheet.getRange(i,4).getValue(); 
+        var courseName = range.getCell(i,5).getValue();
+        var courseId = range.getCell(i,6).getValue();
+ 
+        var studentFolder= DriveApp.createFolder( firstName + " " + lastName);    
+        var newlyCreatedStudents = DriveApp.getFolderById("1JxCSnI7P5sBey7lThkIsMYbgyTAiSDlg");
+       newlyCreatedStudents.addFolder(studentFolder); 
+       DriveApp.getRootFolder().removeFolder(studentFolder);    
+             studentFolder.setDescription(studentId); 
+ 
+    var courseFolder= DriveApp.createFolder(firstName +" " + lastName + " " + courseId);           
+    studentFolder.addFolder(courseFolder);                                      
+    DriveApp.getRootFolder().removeFolder(courseFolder);
+    //var accessFolder = courseFolder.addEditor(studentEmail);  // Shares folder to student
+}
+  }   
+/*** Function Organize Folders uses the first letter of first name to sort folders alphabetically into folders A-F, G-M, N-S, T-Z ***/ 
+function organizeFolders(){
+     var folders = newlyCreatedStudents.getFolders();
+  while (folders.hasNext()) { //Iterate through newly created student files
+      var folder = folders.next();
+      var folderName = folder.getName()
+      var firstLetter = folderName.charCodeAt(0); 
+  if( firstLetter <= 70 ){
+    folderAF.addFolder(folder);
+    newlyCreatedStudents.removeFolder(folder);
+   }
+  else if (firstLetter <= 77 ){
+     folderGM.addFolder(folder);
+     newlyCreatedStudents.removeFolder(folder);
+   }
+   else if (firstLetter <= 83){
+     folderNS.addFolder(folder);
+     newlyCreatedStudents.removeFolder(folder);
+   }  
+   else{
+     folderTZ.addFolder(folder);
+     newlyCreatedStudents.removeFolder(folder);
+    }
+  }
+}
+/*** Function mergeFolders starts with one folder and searches all others by description. This function merges together folders with matching student IDs. ***/ 
+function mergeFolders() {
+  for ( i = 0; i < arrNames.length; i++){ 
+       var folderNamed = arrNames[i]; 
+       var folders = folderNamed.getFolders();
+  while (folders.hasNext()) { 
+       var folderOne = folders.next();
+       var idOne = folderOne.getDescription(); 
+       var firstId = folderOne.getId(); 
+       var folders = folderNamed.getFolders();  
+  while(folders.hasNext()){ 
+       var folderTwo = folders.next();
+       var idTwo = folderTwo.getDescription();
+       var secondId = folderTwo.getId(); 
+   if(firstId != secondId && idOne == idTwo){                             
+      var subFolders = folderTwo.getFolders();
+   while(subFolders.hasNext()){                      
+      var subFolder = subFolders.next(); 
+       folderOne.addFolder(subFolder);
+       folderNamed.removeFolder(folderTwo);
+     }
+    }
+   else{}
+  } 
+ } 
+}
+}
+/*** Function returnFileNameID requires an empty spread sheet. It goes through all folders in Database folder and returns folder name and folder ID***/ 
+function returnFileNameID(){  
+ var cellNames = sheet.getRange(r2,c1);
+ for ( i = 0; i < arrNames.length; i++){ 
+     var folders = arrNames[i].getFolders();
+while (folders.hasNext()) { 
+   var folder = folders.next();
+   var cellNames = sheet.getRange(r2,c1);
+    var folderName = folder.getName();  //no objects left 
+    cellNames.setValue(folderName);
+     var cellIds = sheet.getRange(r2,c2);
+     var folderId = folder.getId(); 
+     cellIds.setValue(folderId);
+     r2++;
+     }
+   }
+  }
+/*** Function sortNames goes through all Folders in Database folder and switches the place of first and last name ***/ 
+function sortNames(){                     
+     for ( i = 0; i < arrNames.length; i++){ 
+     var folderNamed = arrNames[i]; 
+     var folders = folderNamed.getFolders();
+while (folders.hasNext()) { 
+   var folder = folders.next();
+   var folderName = folder.getName(); 
+   var lastPosition = folderName.length;
+   var midPosition = folderName.indexOf(" ");
+   var firstName = folderName.substring(midPosition+1,lastPosition);
+   var lastName = folderName.substring(0, midPosition); 
+   folder.setName(firstName+ " " +lastName );
+     }
+   var subFolders = folder.getFolders();
+while (subFolders.hasNext()){
+   var subFolder = subFolders.next(); 
+   var subFolderName = subFolder.getName(); 
+   subFolder.setName(firstName+ " " + lastName + " " + subFolderName);
+    }
+  }
+}
